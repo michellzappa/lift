@@ -1,0 +1,24 @@
+name: Build
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: app
+      # HouseKit is a sibling path dependency (../housekit) in project.yml.
+      - uses: actions/checkout@v4
+        with:
+          repository: michellzappa/housekit
+          path: housekit
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Build
+        run: xcodebuild build -project Lift.xcodeproj -scheme Lift -configuration Debug -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO -quiet
