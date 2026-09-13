@@ -1,0 +1,141 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_DEVELOPER_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
+      APPLE_DEVELOPER_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+      APPLE_API_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_API_PRIVATE_KEY_BASE64 }}
+
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          path: app
+
+      # HouseKit is a sibling path dependency (../housekit) in project.yml.
+      - name: Check out HouseKit
+        uses: actions/checkout@v4
+        with:
+          repository: michellzappa/housekit
+          path: housekit
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Validate tag and app version
+        shell: bash
+        run: |
+          version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Lift/Resources/Info.plist)
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [[ "$version" != "$tag_version" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match CFBundleShortVersionString $version"
+            exit 1
+          fi
+          echo "APP_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Import Developer ID certificate
+        shell: bash
+        run: |
+          certificate_path="$RUNNER_TEMP/developer-id.p12"
+          keychain_path="$RUNNER_TEMP/lift-build.keychain-db"
+          keychain_password=$(openssl rand -hex 20)
+
+          echo "$APPLE_DEVELOPER_CERTIFICATE_P12_BASE64" | base64 --decode > "$certificate_path"
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$certificate_path" \
+            -P "$APPLE_DEVELOPER_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$keychain_path"
+          security list-keychains -d user -s "$keychain_path" login.keychain-db
+          security default-keychain -s "$keychain_path"
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s -k "$keychain_password" "$keychain_path"
+
+      - name: Archive universal app
+        shell: bash
+        run: |
+          xcodebuild \
+            -project Lift.xcodeproj \
+            -scheme Lift \
+            -configuration Release \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -archivePath "$RUNNER_TEMP/Lift.xcarchive" \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            archive
+
+      - name: Verify app signature
+        shell: bash
+        run: |
+          app_path="$RUNNER_TEMP/Lift.xcarchive/Products/Applications/Lift.app"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+
+      - name: Submit app for notarization
+        shell: bash
+        run: |
+          app_path="$RUNNER_TEMP/Lift.xcarchive/Products/Applications/Lift.app"
+          unsigned_zip="$RUNNER_TEMP/Lift-$APP_VERSION-notarization.zip"
+          api_key_path="$RUNNER_TEMP/AuthKey_$APPLE_API_KEY_ID.p8"
+
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" "$unsigned_zip"
+          echo "$APPLE_API_PRIVATE_KEY_BASE64" | base64 --decode > "$api_key_path"
+          xcrun notarytool submit "$unsigned_zip" \
+            --key "$api_key_path" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" \
+            --wait
+
+      - name: Staple notarization ticket
+        shell: bash
+        run: |
+          app_path="$RUNNER_TEMP/Lift.xcarchive/Products/Applications/Lift.app"
+          xcrun stapler staple "$app_path"
+          xcrun stapler validate "$app_path"
+
+      - name: Package release assets
+        shell: bash
+        run: |
+          app_path="$RUNNER_TEMP/Lift.xcarchive/Products/Applications/Lift.app"
+          release_dir="$RUNNER_TEMP/release"
+          zip_path="$release_dir/Lift-$APP_VERSION.zip"
+          checksums_path="$release_dir/SHA256SUMS"
+
+          mkdir -p "$release_dir"
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" "$zip_path"
+          shasum -a 256 "$zip_path" > "$checksums_path"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "$RUNNER_TEMP/release/Lift-$APP_VERSION.zip" \
+            "$RUNNER_TEMP/release/SHA256SUMS" \
+            --title "Lift $APP_VERSION" \
+            --generate-notes
