@@ -103,8 +103,13 @@ final class DeskPage: SettingsForm {
         heightLabel.stringValue = desk.height.map(LiftAppDelegate.format) ?? "—"
         forgetButton.isEnabled = store.settings.deskIdentifier != nil
         reconnectButton.isHidden = desk.isConnected
-        if view.window?.firstResponder !== sitField.currentEditor() { sitField.doubleValue = store.settings.sitHeight }
-        if view.window?.firstResponder !== standField.currentEditor() { standField.doubleValue = store.settings.standHeight }
+        if !isEditing(sitField) { sitField.doubleValue = store.settings.sitHeight }
+        if !isEditing(standField) { standField.doubleValue = store.settings.standHeight }
+    }
+
+    private func isEditing(_ field: NSTextField) -> Bool {
+        guard let editor = field.currentEditor() else { return false }
+        return view.window?.firstResponder === editor
     }
 
     @objc private func presetEdited(_ sender: NSTextField) {
