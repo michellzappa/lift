@@ -1,5 +1,6 @@
 import AppKit
 import HouseKit
+import HouseKitSparkle
 
 @main
 @MainActor
@@ -9,6 +10,8 @@ final class LiftAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let sitHotkey = GlobalHotkey(signature: "LIFT", id: 1)
     private let standHotkey = GlobalHotkey(signature: "LIFT", id: 2)
     private lazy var settingsWindowController = SettingsWindowController.lift(store: store, desk: desk)
+    /// Sparkle. Feed and key come from Info.plist (housekit docs/releasing.md).
+    private let updates = SparkleUpdater(appName: "Lift")
     private var statusItem: NSStatusItem!
     private var statusMenu: NSMenu!
 
@@ -130,7 +133,8 @@ final class LiftAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             settings: #selector(showSettings(_:)),
             launchAtLogin: #selector(toggleLaunchAtLogin(_:)),
             launchAtLoginEnabled: settings.launchAtLogin,
-            quit: #selector(quit(_:))
+            quit: #selector(quit(_:)),
+            updates: updates
         )
     }
 

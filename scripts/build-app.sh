@@ -25,6 +25,9 @@ xcodebuild -project Lift.xcodeproj -scheme Lift -configuration "$config" \
   CODE_SIGNING_ALLOWED=NO -quiet build
 app="build/DerivedData/Build/Products/$config/Lift.app"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build" "$app/Contents/Info.plist"
+# Sparkle ships signed by its own team; hardened runtime refuses to load
+# a framework from another team, so sign it with ours first.
+codesign --force --deep --options runtime --sign "Apple Development" "$app/Contents/Frameworks/Sparkle.framework"
 codesign --force --sign "Apple Development" --entitlements Lift/Resources/Lift.entitlements --options runtime "$app"
 
 target=/Applications/Lift.app
