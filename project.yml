@@ -9,8 +9,12 @@ configs:
   Debug: debug
   Release: release
 packages:
+  # The house settings shell, glyphs and changelog view
+  # (michellzappa/housekit). Pinned to a release tag so CI, the mini and the
+  # laptop build the same code; move the pin on purpose.
   HouseKit:
-    path: ../housekit
+    url: https://github.com/michellzappa/housekit
+    exactVersion: 0.1.0
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -40,6 +44,9 @@ targets:
         excludes:
           - "Resources/Info.plist"
           - "Resources/Lift.entitlements"
+      # HouseKit Changelog.load() reads the bundled release notes.
+      - path: CHANGELOG.md
+        buildPhase: resources
     dependencies:
       - package: HouseKit
         product: HouseKit

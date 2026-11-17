@@ -36,7 +36,8 @@ No notarized release yet. Build it yourself:
 ./scripts/build-app.sh      # → /Applications/Lift.app, signed, icon regenerated
 ```
 
-Needs `xcodegen` and the sibling [`../housekit`](../housekit) package, which
+Needs `xcodegen`. [HouseKit](https://github.com/michellzappa/housekit), pinned to a
+release tag in `project.yml`,
 supplies the menu bar plate, the app icon, the settings window chrome, the
 shortcut recorder and launch-at-login — the pieces Lift shares with Tessellate,
 Cargo and Clip. To work in Xcode instead: `xcodegen generate && open Lift.xcodeproj`.
