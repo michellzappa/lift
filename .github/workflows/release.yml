@@ -30,13 +30,6 @@ jobs:
         with:
           path: app
 
-      # HouseKit is a sibling path dependency (../housekit) in project.yml.
-      - name: Check out HouseKit
-        uses: actions/checkout@v4
-        with:
-          repository: michellzappa/housekit
-          path: housekit
-
       - name: Install XcodeGen
         run: brew install xcodegen
 
