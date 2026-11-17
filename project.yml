@@ -14,9 +14,15 @@ packages:
   # laptop build the same code; move the pin on purpose.
   HouseKit:
     url: https://github.com/michellzappa/housekit
-    exactVersion: 0.1.0
+    exactVersion: 0.2.0
 settings:
   base:
+    # The release workflow and scripts/build-app.sh set this to the git
+    # commit count. Sparkle compares it, so it must grow with every release.
+    CURRENT_PROJECT_VERSION: "1"
+    # Sparkle's EdDSA public key (Info.plist SUPublicEDKey). Empty keeps
+    # the updater off. housekit/scripts/sparkle-key.sh makes the pair.
+    SPARKLE_PUBLIC_ED_KEY: "fJ2axFwMl/TUk8KDLcfSoAVQNwqFiuVeGKyKKFfXr18="
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
     # Same lesson as Tessellate: TCC keys the Accessibility grant to the code
@@ -50,6 +56,8 @@ targets:
     dependencies:
       - package: HouseKit
         product: HouseKit
+      - package: HouseKit
+        product: HouseKitSparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.lift.Lift
