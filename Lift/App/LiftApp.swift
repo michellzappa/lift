@@ -143,13 +143,15 @@ final class LiftAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let stopItem = NSMenuItem(title: "Stop", action: #selector(stopDesk(_:)), keyEquivalent: ".")
         stopItem.isEnabled = desk.isMoving
         for item in [sitItem, standItem, upItem, downItem] { item.isEnabled = connected }
-        statusMenu.items += [sitItem, standItem, .separator(), upItem, downItem, stopItem, .separator()]
+        // Tallest preset on top, like the desk itself.
+        let standOnTop = settings.standHeight >= settings.sitHeight
+        statusMenu.items += (standOnTop ? [standItem, sitItem] : [sitItem, standItem]) + [.separator(), upItem, downItem, stopItem, .separator()]
 
         let saveSit = NSMenuItem(title: "Save Current as Sit Height", action: #selector(saveSit(_:)), keyEquivalent: "")
         let saveStand = NSMenuItem(title: "Save Current as Stand Height", action: #selector(saveStand(_:)), keyEquivalent: "")
         saveSit.isEnabled = desk.height != nil
         saveStand.isEnabled = desk.height != nil
-        statusMenu.items += [saveSit, saveStand]
+        statusMenu.items += standOnTop ? [saveStand, saveSit] : [saveSit, saveStand]
         statusMenu.addItem(.separator())
         statusMenu.addItem(NSMenuItem(title: "History…", action: #selector(showHistory(_:)), keyEquivalent: ""))
         if !connected {
