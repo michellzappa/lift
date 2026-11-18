@@ -28,6 +28,12 @@ app="build/DerivedData/Build/Products/$config/Lift.app"
 # Sparkle ships signed by its own team; hardened runtime refuses to load
 # a framework from another team, so sign it with ours first.
 codesign --force --deep --options runtime --sign "Apple Development" "$app/Contents/Frameworks/Sparkle.framework"
+# Xcode's Debug configuration puts the executable code in a nested debug
+# dylib. Sign it before signing the app bundle, otherwise macOS library
+# validation rejects the installed Debug app at launch.
+if [[ -f "$app/Contents/MacOS/Lift.debug.dylib" ]]; then
+  codesign --force --sign "Apple Development" --options runtime "$app/Contents/MacOS/Lift.debug.dylib"
+fi
 codesign --force --sign "Apple Development" --entitlements Lift/Resources/Lift.entitlements --options runtime "$app"
 
 target=/Applications/Lift.app
