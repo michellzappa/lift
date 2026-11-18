@@ -18,6 +18,15 @@ struct LiftSettings: Codable, Equatable, Sendable {
     static let maximumHeight: Double = 127
     static let defaultsKey = "lift.settings"
 
+    /// The preset this height is nearest to. The midpoint between the two
+    /// presets splits sitting from standing, so a desk that stops a few
+    /// centimetres short of a preset still counts.
+    func posture(at height: Double) -> LiftPosture {
+        let midpoint = (sitHeight + standHeight) / 2
+        let tallIsStand = standHeight >= sitHeight
+        return (height >= midpoint) == tallIsStand ? .standing : .sitting
+    }
+
     static func load(from defaults: UserDefaults = .standard) -> LiftSettings {
         guard let data = defaults.data(forKey: defaultsKey),
               let settings = try? JSONDecoder().decode(LiftSettings.self, from: data)

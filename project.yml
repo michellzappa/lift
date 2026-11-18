@@ -14,7 +14,7 @@ packages:
   # laptop build the same code; move the pin on purpose.
   HouseKit:
     url: https://github.com/michellzappa/housekit
-    exactVersion: 0.2.0
+    exactVersion: 0.2.1
 settings:
   base:
     # The release workflow and scripts/build-app.sh set this to the git
