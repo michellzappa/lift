@@ -141,8 +141,7 @@ final class PostureHistoryStore {
         status: DeskController.Status,
         height: Double?,
         isMoving: Bool,
-        sitHeight: Double,
-        standHeight: Double,
+        settings: LiftSettings,
         isPresent: Bool,
         presenceChangedAt: Date,
         at date: Date = Date()
@@ -163,15 +162,7 @@ final class PostureHistoryStore {
             return
         }
 
-        let posture = classify(height: height, sitHeight: sitHeight, standHeight: standHeight)
-        guard posture != .unknown else {
-            settleTask?.cancel()
-            candidatePosture = nil
-            candidateStartedAt = nil
-            commit(.unknown, height: height, at: date)
-            return
-        }
-
+        let posture = settings.posture(at: height)
         guard posture != currentPosture else {
             settleTask?.cancel()
             candidatePosture = nil
@@ -261,15 +252,6 @@ final class PostureHistoryStore {
             away: away,
             switches: switchCount(in: DateInterval(start: bounds.start, end: bounds.end))
         )
-    }
-
-    private func classify(height: Double, sitHeight: Double, standHeight: Double) -> LiftPosture {
-        let sitDistance = abs(height - sitHeight)
-        let standDistance = abs(height - standHeight)
-        let tolerance = 2.0
-        if sitDistance <= tolerance, sitDistance <= standDistance { return .sitting }
-        if standDistance <= tolerance { return .standing }
-        return .unknown
     }
 
     private func commit(_ posture: LiftPosture, height: Double?, at date: Date) {

@@ -83,8 +83,7 @@ final class LiftAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             status: desk.status,
             height: desk.height,
             isMoving: desk.isMoving,
-            sitHeight: store.settings.sitHeight,
-            standHeight: store.settings.standHeight,
+            settings: store.settings,
             isPresent: presence.isPresent,
             presenceChangedAt: presence.changedAt
         )
@@ -105,11 +104,7 @@ final class LiftAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var headerText: String {
         guard desk.isConnected else { return desk.status.label }
         guard let height = desk.height else { return "Reading height…" }
-        let posture: String
-        if desk.isMoving { posture = "Moving" }
-        else if abs(height - store.settings.standHeight) < 1.5 { posture = "Standing" }
-        else if abs(height - store.settings.sitHeight) < 1.5 { posture = "Sitting" }
-        else { posture = desk.status.label }
+        let posture = desk.isMoving ? "Moving" : store.settings.posture(at: height).title
         return "\(Self.format(height)) · \(posture)"
     }
 

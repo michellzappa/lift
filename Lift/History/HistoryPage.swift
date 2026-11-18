@@ -35,7 +35,7 @@ final class HistoryPage: SettingsForm {
         row("At this Mac", activeLabel)
         row(nil, chart)
         chart.heightAnchor.constraint(equalToConstant: 190).isActive = true
-        note("Lift counts sitting and standing only while you are at this Mac: local keyboard or mouse input in the last 5 minutes, screen awake and unlocked. A Screen Sharing session counts as away. Bars show time at this Mac. Unknown means you were here but the desk was disconnected, moving, or between presets.")
+        note("Lift counts sitting and standing only while you are at this Mac: local keyboard or mouse input in the last 5 minutes, screen awake and unlocked. A Screen Sharing session counts as away. Bars show time at this Mac. A height counts as the preset it is nearest to. Unknown means you were here but the desk was disconnected or moving.")
         section("Data")
         row(nil, clearButton)
         note("History is stored locally on this Mac. Clearing it cannot be undone.")
