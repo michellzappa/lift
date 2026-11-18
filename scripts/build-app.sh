@@ -16,8 +16,10 @@ xcodegen generate --quiet
 # housekit-icon from that same checkout. HOUSEKIT_PATH overrides it.
 xcodebuild -resolvePackageDependencies -project Lift.xcodeproj -scheme Lift -derivedDataPath build/DerivedData -quiet >/dev/null
 housekit="${HOUSEKIT_PATH:-$here/build/DerivedData/SourcePackages/checkouts/housekit}"
-swift build -c release --package-path "$housekit" >/dev/null
-"$(swift build -c release --package-path "$housekit" --show-bin-path)/housekit-icon" lift "$here/Lift/Resources/AppIcon.icns" >/dev/null
+# Xcode keeps the package checkout read-only, so build outside it.
+scratch="$here/build/housekit-icon"
+swift build -c release --package-path "$housekit" --scratch-path "$scratch" >/dev/null
+"$(swift build -c release --package-path "$housekit" --scratch-path "$scratch" --show-bin-path)/housekit-icon" lift "$here/Lift/Resources/AppIcon.icns" >/dev/null
 
 build="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 xcodebuild -project Lift.xcodeproj -scheme Lift -configuration "$config" \
