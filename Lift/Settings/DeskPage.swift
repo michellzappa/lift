@@ -4,9 +4,10 @@ import HouseKit
 
 extension SettingsWindowController {
     /// Desk · General · About.
-    static func lift(store: LiftStore, desk: DeskController) -> SettingsWindowController {
+    static func lift(store: LiftStore, desk: DeskController, history: PostureHistoryStore) -> SettingsWindowController {
         SettingsWindowController(appName: "Lift", pages: [
             SettingsPage("Desk", symbol: "table.furniture", controller: DeskPage(store: store, desk: desk)),
+            SettingsPage("History", symbol: "chart.bar.xaxis", controller: HistoryPage(history: history, store: store)),
             SettingsPage("General", symbol: "gearshape", controller: GeneralPage(
                 launchAtLogin: (get: { store.settings.launchAtLogin }, set: { value in store.update { $0.launchAtLogin = value } }),
                 showMenuBarIcon: (get: { store.settings.showMenuBarIcon }, set: { value in store.update { $0.showMenuBarIcon = value } }),

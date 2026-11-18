@@ -48,7 +48,9 @@ own `DEVELOPMENT_TEAM` first. The Bluetooth grant is keyed to the signature.
 ## Configuration
 
 Settings lives in the menu bar item (⌘,): **Desk** (connection, presets in cm,
-hotkeys) · **General** (launch at login, menu bar icon, Bluetooth status) · **About**.
+hotkeys) · **History** (local sitting/standing history for the last 24 hours,
+7 days, 30 days, or 90 days) · **General** (launch at login, menu bar icon,
+Bluetooth status) · **About**.
 
 ## Architecture
 
@@ -58,7 +60,10 @@ AppKit throughout, no dependencies beyond `HouseKit`.
 | --- | --- |
 | `Desk/DeskController` | CoreBluetooth central: discovery, reconnect on sleep/wake, height notifications, move-to loop, nudge, stop |
 | `Models/LiftSettings` | Presets, hotkeys, remembered desk; `UserDefaults` |
-| `Settings/DeskPage` | Lift's page in the HouseKit settings window, next to the shared General and About pages |
+| `History/PresenceMonitor` | At-this-Mac detection: local input in the last 5 min, screen awake and unlocked, no Screen Sharing session (`screensharingd` running) |
+| `History/HistoryStore` | Local sit/stand/away transitions, summaries, and day/week/month aggregation; sitting and standing count only while present |
+| `History/HistoryPage` | The 24h/7d/30d/90d history view and chart |
+| `Settings/DeskPage` | Lift's Desk and History pages in the HouseKit settings window, next to the shared General and About pages |
 | `App/LiftApp` | `NSStatusItem` and its menu — height header, Sit/Stand with shortcuts, nudge, save-as, then the house tail |
 
 Protocol details come from the open `idasen` and `linak-controller` projects.

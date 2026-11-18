@@ -9,7 +9,9 @@ final class LiftAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let desk = DeskController()
     private let sitHotkey = GlobalHotkey(signature: "LIFT", id: 1)
     private let standHotkey = GlobalHotkey(signature: "LIFT", id: 2)
-    private lazy var settingsWindowController = SettingsWindowController.lift(store: store, desk: desk)
+    private let history = PostureHistoryStore()
+    private let presence = PresenceMonitor()
+    private lazy var settingsWindowController = SettingsWindowController.lift(store: store, desk: desk, history: history)
     /// Sparkle. Feed and key come from Info.plist (housekit docs/releasing.md).
     private let updates = SparkleUpdater(appName: "Lift")
     private var statusItem: NSStatusItem!
@@ -40,11 +42,18 @@ final class LiftAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         desk.preferredIdentifier = store.settings.deskIdentifier
         desk.onPaired = { [store] id, name in store.update { $0.deskIdentifier = id; $0.deskName = name } }
+        history.beginSession()
+        NotificationCenter.default.addObserver(self, selector: #selector(deskDidChange), name: PresenceMonitor.didChange, object: presence)
+        presence.start()
         sitHotkey.onPress = { [weak self] in self?.sit(nil) }
         standHotkey.onPress = { [weak self] in self?.stand(nil) }
         applySettings()
         NotificationCenter.default.addObserver(self, selector: #selector(settingsDidChange), name: LiftStore.didChange, object: store)
         NotificationCenter.default.addObserver(self, selector: #selector(deskDidChange), name: DeskController.didChange, object: desk)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        history.endSession()
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
@@ -64,8 +73,22 @@ final class LiftAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return true
     }
 
-    @objc private func settingsDidChange() { applySettings() }
-    @objc private func deskDidChange() { statusItem.button?.toolTip = headerText }
+    @objc private func settingsDidChange() {
+        applySettings()
+        deskDidChange()
+    }
+    @objc private func deskDidChange() {
+        statusItem.button?.toolTip = headerText
+        history.observe(
+            status: desk.status,
+            height: desk.height,
+            isMoving: desk.isMoving,
+            sitHeight: store.settings.sitHeight,
+            standHeight: store.settings.standHeight,
+            isPresent: presence.isPresent,
+            presenceChangedAt: presence.changedAt
+        )
+    }
 
     private func applySettings() {
         let settings = store.settings
@@ -102,6 +125,12 @@ final class LiftAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func rebuildStatusMenu() {
         statusMenu.removeAllItems()
         statusMenu.addItem(StatusMenu.sectionHeader(headerText))
+        let day = history.summary(for: .day)
+        if let share = day.standingShare {
+            let line = "24h: \(Int((share * 100).rounded()))% standing · \(HistoryPage.formatDuration(day.active)) at this Mac"
+            let dayItem = NSMenuItem(title: line, action: #selector(showHistory(_:)), keyEquivalent: "")
+            statusMenu.addItem(dayItem)
+        }
         let settings = store.settings
         let connected = desk.isConnected
 
@@ -121,6 +150,8 @@ final class LiftAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         saveSit.isEnabled = desk.height != nil
         saveStand.isEnabled = desk.height != nil
         statusMenu.items += [saveSit, saveStand]
+        statusMenu.addItem(.separator())
+        statusMenu.addItem(NSMenuItem(title: "History…", action: #selector(showHistory(_:)), keyEquivalent: ""))
         if !connected {
             statusMenu.addItem(.separator())
             statusMenu.addItem(NSMenuItem(title: "Reconnect", action: #selector(reconnect(_:)), keyEquivalent: "r"))
@@ -183,6 +214,7 @@ final class LiftAppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         store.update { $0.standHeight = (height * 10).rounded() / 10 }
     }
     @objc private func showSettings(_ sender: Any?) { settingsWindowController.show() }
+    @objc private func showHistory(_ sender: Any?) { settingsWindowController.show(page: 1) }
     @objc private func toggleLaunchAtLogin(_ sender: Any?) { store.update { $0.launchAtLogin.toggle() } }
     @objc private func quit(_ sender: Any?) { NSApp.terminate(nil) }
 }
